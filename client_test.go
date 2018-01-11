@@ -62,7 +62,7 @@ func TestClient_Send(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	err = c.Send("queue.sample", "hello, world", 0, TIBEMS_NON_PERSISTENT, 10000)
+	err = c.Send("queue.sample", "hello, world", 0, "non_persistent", 10000)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

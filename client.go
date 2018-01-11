@@ -26,6 +26,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"unsafe"
+	"strings"
 )
 
 type TibemsErrorContext struct {
@@ -96,7 +97,7 @@ type Client interface {
 	IsConnected() bool
 	Connect() error
 	Disconnect() error
-	Send(destination string, message string, deliveryDelay int, deliveryMode int, expiration int) error
+	Send(destination string, message string, deliveryDelay int, deliveryMode string, expiration int) error
 }
 
 type client struct {
@@ -189,7 +190,7 @@ func (c *client) Disconnect() error {
 	return nil
 }
 
-func (c *client) Send(destination string, message string, deliveryDelay int, deliveryMode int, expiration int) error {
+func (c *client) Send(destination string, message string, deliveryDelay int, deliveryMode string, expiration int) error {
 
 	dest := new(Destination)
 	session := new(Session)
@@ -223,7 +224,14 @@ func (c *client) Send(destination string, message string, deliveryDelay int, del
 		return errors.New(e)
 	}
 
-	status = C.tibemsMsgProducer_SetDeliveryMode(msgProducer.messageProducer, C.castToInt(C.int(deliveryMode)))
+	var emsDeliveryMode = TIBEMS_NON_PERSISTENT
+	if strings.ToLower(deliveryMode)=="persistent"  {
+		emsDeliveryMode = TIBEMS_PERSISTENT
+	} else if strings.ToLower(deliveryMode)=="non_persistent" {
+		emsDeliveryMode = TIBEMS_NON_PERSISTENT
+	}
+
+	status = C.tibemsMsgProducer_SetDeliveryMode(msgProducer.messageProducer, C.castToInt(C.int(emsDeliveryMode)))
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
