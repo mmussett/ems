@@ -4,6 +4,7 @@ package ems
 #cgo darwin CFLAGS: -I.
 #cgo darwin CFLAGS: -I/opt/tibco/ems/ems830/ems/8.3/include/tibems
 #cgo darwin LDFLAGS: -L/opt/tibco/ems/ems830/ems/8.3/lib -ltibems64
+
 #include <tibems.h>
 tibemsDestination castToDestination(tibemsTemporaryQueue queue) {
   return (tibemsDestination)queue;
@@ -29,69 +30,6 @@ import (
 	"strings"
 )
 
-type TibemsErrorContext struct {
-	errorContext C.tibemsErrorContext
-}
-
-type TibemsConnectionFactory struct {
-	factory C.tibemsConnectionFactory
-}
-
-type TibemsConnection struct {
-	connection C.tibemsConnection
-}
-
-type Queue struct {
-	destination C.tibemsQueue
-}
-
-type Topic struct {
-	destination C.tibemsTopic
-}
-
-type Session struct {
-	session C.tibemsSession
-}
-
-type QueueSession struct {
-	session C.tibemsQueueSession
-}
-
-type TopicSession struct {
-	session C.tibemsTopicSession
-}
-
-type MessageProducer struct {
-	messageProducer C.tibemsMsgProducer
-}
-
-type Destination struct {
-	destination C.tibemsDestination
-}
-
-type TextMsg struct {
-	msg C.tibemsTextMsg
-}
-
-type Msg struct {
-	msg C.tibemsMsg
-}
-
-type MessageRequestor struct {
-	requestor C.tibemsMsgRequestor
-}
-
-type TemporaryQueue struct {
-	tempQueue C.tibemsTemporaryQueue
-}
-
-type QueueReceiver struct {
-	queueReceiver C.tibemsQueueReceiver
-}
-
-type Boolean struct {
-	boolean C.tibems_bool
-}
 
 type Client interface {
 	IsConnected() bool
@@ -101,9 +39,9 @@ type Client interface {
 }
 
 type client struct {
-	conn         TibemsConnection
-	cf           TibemsConnectionFactory
-	errorContext TibemsErrorContext
+	conn         C.tibemsConnection
+	cf           C.tibemsConnectionFactory
+	errorContext C.tibemsErrorContext
 	status       uint32
 	options      ClientOptions
 	sync.RWMutex
@@ -131,31 +69,31 @@ func (c *client) Connect() error {
 	c.RLock()
 	defer c.RUnlock()
 
-	status := C.tibemsErrorContext_Create(&c.errorContext.errorContext)
+	status := C.tibemsErrorContext_Create(&c.errorContext)
 
 	if status != TIBEMS_OK {
 		return errors.New("failed to create error context")
 	}
 
-	c.cf.factory = C.tibemsConnectionFactory_Create()
+	c.cf = C.tibemsConnectionFactory_Create()
 
 	url := c.options.GetServerUrl()
 
-	status = C.tibemsConnectionFactory_SetServerURL(c.cf.factory, C.CString(url.String()))
+	status = C.tibemsConnectionFactory_SetServerURL(c.cf, C.CString(url.String()))
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// create the connection
-	status = C.tibemsConnectionFactory_CreateConnection(c.cf.factory, &c.conn.connection, C.CString(c.options.username), C.CString(c.options.password))
+	status = C.tibemsConnectionFactory_CreateConnection(c.cf, &c.conn, C.CString(c.options.username), C.CString(c.options.password))
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// start the connection
-	status = C.tibemsConnection_Start(c.conn.connection)
+	status = C.tibemsConnection_Start(c.conn)
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
@@ -173,13 +111,13 @@ func (c *client) Disconnect() error {
 
 	if c.IsConnected() {
 
-		status := C.tibemsConnection_Stop(c.conn.connection)
+		status := C.tibemsConnection_Stop(c.conn)
 		if status != TIBEMS_OK {
 			return errors.New("failed to stop connection")
 		}
 
 		// close the connection
-		status = C.tibemsConnection_Close(c.conn.connection)
+		status = C.tibemsConnection_Close(c.conn)
 		if status != tibems.TIBEMS_OK {
 			return errors.New("failed to close connection")
 		}
@@ -192,33 +130,33 @@ func (c *client) Disconnect() error {
 
 func (c *client) Send(destination string, message string, deliveryDelay int, deliveryMode string, expiration int) error {
 
-	dest := new(Destination)
-	session := new(Session)
-	msgProducer := new(MessageProducer)
-	txtMsg := new(TextMsg)
+	var dest C.tibemsDestination
+	var session C.tibemsSession
+  var msgProducer C.tibemsMsgProducer
+  var txtMsg C.tibemsTextMsg
 
 	// create the destination
-	status := C.tibemsDestination_Create(&dest.destination, tibems.TIBEMS_QUEUE, C.CString(destination))
+	status := C.tibemsDestination_Create(&dest, tibems.TIBEMS_QUEUE, C.CString(destination))
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// create the session
-	status = C.tibemsConnection_CreateSession(c.conn.connection, &session.session, tibems.TIBEMS_FALSE, tibems.TIBEMS_AUTO_ACKNOWLEDGE)
+	status = C.tibemsConnection_CreateSession(c.conn, &session, tibems.TIBEMS_FALSE, tibems.TIBEMS_AUTO_ACKNOWLEDGE)
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// create the producer
-	status = C.tibemsSession_CreateProducer(session.session, &msgProducer.messageProducer, dest.destination)
+	status = C.tibemsSession_CreateProducer(session, &msgProducer, dest)
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
-	status = C.tibemsMsgProducer_SetDeliveryDelay(msgProducer.messageProducer, C.castToLong(C.int(deliveryDelay)))
+	status = C.tibemsMsgProducer_SetDeliveryDelay(msgProducer, C.castToLong(C.int(deliveryDelay)))
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
@@ -231,62 +169,62 @@ func (c *client) Send(destination string, message string, deliveryDelay int, del
 		emsDeliveryMode = TIBEMS_NON_PERSISTENT
 	}
 
-	status = C.tibemsMsgProducer_SetDeliveryMode(msgProducer.messageProducer, C.castToInt(C.int(emsDeliveryMode)))
+	status = C.tibemsMsgProducer_SetDeliveryMode(msgProducer, C.castToInt(C.int(emsDeliveryMode)))
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
-	status = C.tibemsMsgProducer_SetTimeToLive(msgProducer.messageProducer, C.castToLong(C.int(expiration)))
+	status = C.tibemsMsgProducer_SetTimeToLive(msgProducer, C.castToLong(C.int(expiration)))
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// create the message
-	status = C.tibemsTextMsg_Create(&txtMsg.msg)
+	status = C.tibemsTextMsg_Create(&txtMsg)
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// set the message text
-	status = C.tibemsTextMsg_SetText(txtMsg.msg, C.CString(message))
+	status = C.tibemsTextMsg_SetText(txtMsg, C.CString(message))
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// publish the message
-	status = C.tibemsMsgProducer_Send(msgProducer.messageProducer, txtMsg.msg)
+	status = C.tibemsMsgProducer_Send(msgProducer, txtMsg)
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// destroy the message
-	status = C.tibemsMsg_Destroy(txtMsg.msg)
+	status = C.tibemsMsg_Destroy(txtMsg)
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// destroy the producer
-	status = C.tibemsMsgProducer_Close(msgProducer.messageProducer)
+	status = C.tibemsMsgProducer_Close(msgProducer)
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// destroy the session
-	status = C.tibemsSession_Close(session.session)
+	status = C.tibemsSession_Close(session)
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// destroy the destination
-	status = C.tibemsDestination_Destroy(dest.destination)
+	status = C.tibemsDestination_Destroy(dest)
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
@@ -314,10 +252,10 @@ func (c *client) getErrorContext() (string, string) {
 	var buf *C.char
 	defer C.free(unsafe.Pointer(buf))
 
-	C.tibemsErrorContext_GetLastErrorString(c.errorContext.errorContext, &buf)
+	C.tibemsErrorContext_GetLastErrorString(c.errorContext, &buf)
 	errorString = C.GoString(buf)
 
-	C.tibemsErrorContext_GetLastErrorStackTrace(c.errorContext.errorContext, &buf)
+	C.tibemsErrorContext_GetLastErrorStackTrace(c.errorContext, &buf)
 	stackTrace = C.GoString(buf)
 
 	return errorString, stackTrace
