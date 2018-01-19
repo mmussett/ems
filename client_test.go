@@ -2,8 +2,6 @@ package ems
 
 import (
 	"testing"
-
-	"time"
 )
 
 func TestNewClient(t *testing.T) {
@@ -44,8 +42,6 @@ func TestClient_Connect(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-
-	time.Sleep(30000 * time.Millisecond)
 
 	c.Disconnect()
 

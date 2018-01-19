@@ -23,11 +23,11 @@ tibems_int castToInt(int value) {
 import "C"
 import (
 	"errors"
-	"github.com/mmussett/jmsproxy/tibems"
 	"sync"
 	"sync/atomic"
 	"unsafe"
 	"strings"
+	"github.com/mmussett/jmsproxy/tibems"
 )
 
 
@@ -136,7 +136,7 @@ func (c *client) Send(destination string, message string, deliveryDelay int, del
   var txtMsg C.tibemsTextMsg
 
 	// create the destination
-	status := C.tibemsDestination_Create(&dest, tibems.TIBEMS_QUEUE, C.CString(destination))
+	status := C.tibemsDestination_Create(&dest, TIBEMS_QUEUE, C.CString(destination))
 	if status != tibems.TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
