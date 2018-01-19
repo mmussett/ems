@@ -2,6 +2,7 @@ package ems
 
 import (
 	"testing"
+
 )
 
 func TestNewClient(t *testing.T) {
@@ -67,4 +68,28 @@ func TestClient_Send(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
+}
+
+func TestClient_SendReceive(t *testing.T) {
+
+	ops := NewClientOptions().SetServerUrl("tcp://127.0.0.1:7222").SetUsername("admin").SetPassword("")
+
+	c := NewClient(ops).(*client)
+
+	err := c.Connect()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	_, err = c.SendReceive("queue.sample", "hello, world",  "non_persistent", 1000)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	err = c.Disconnect()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+
 }
