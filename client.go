@@ -27,7 +27,6 @@ import (
 	"sync/atomic"
 	"unsafe"
 	"strings"
-	"github.com/mmussett/jmsproxy/tibems"
 )
 
 
@@ -80,21 +79,21 @@ func (c *client) Connect() error {
 	url := c.options.GetServerUrl()
 
 	status = C.tibemsConnectionFactory_SetServerURL(c.cf, C.CString(url.String()))
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// create the connection
 	status = C.tibemsConnectionFactory_CreateConnection(c.cf, &c.conn, C.CString(c.options.username), C.CString(c.options.password))
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// start the connection
 	status = C.tibemsConnection_Start(c.conn)
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
@@ -118,7 +117,7 @@ func (c *client) Disconnect() error {
 
 		// close the connection
 		status = C.tibemsConnection_Close(c.conn)
-		if status != tibems.TIBEMS_OK {
+		if status != TIBEMS_OK {
 			return errors.New("failed to close connection")
 		}
 
@@ -137,27 +136,27 @@ func (c *client) Send(destination string, message string, deliveryDelay int, del
 
 	// create the destination
 	status := C.tibemsDestination_Create(&dest, TIBEMS_QUEUE, C.CString(destination))
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// create the session
-	status = C.tibemsConnection_CreateSession(c.conn, &session, tibems.TIBEMS_FALSE, tibems.TIBEMS_AUTO_ACKNOWLEDGE)
-	if status != tibems.TIBEMS_OK {
+	status = C.tibemsConnection_CreateSession(c.conn, &session, TIBEMS_FALSE, TIBEMS_AUTO_ACKNOWLEDGE)
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// create the producer
 	status = C.tibemsSession_CreateProducer(session, &msgProducer, dest)
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	status = C.tibemsMsgProducer_SetDeliveryDelay(msgProducer, C.castToLong(C.int(deliveryDelay)))
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
@@ -170,62 +169,62 @@ func (c *client) Send(destination string, message string, deliveryDelay int, del
 	}
 
 	status = C.tibemsMsgProducer_SetDeliveryMode(msgProducer, C.castToInt(C.int(emsDeliveryMode)))
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	status = C.tibemsMsgProducer_SetTimeToLive(msgProducer, C.castToLong(C.int(expiration)))
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// create the message
 	status = C.tibemsTextMsg_Create(&txtMsg)
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// set the message text
 	status = C.tibemsTextMsg_SetText(txtMsg, C.CString(message))
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// publish the message
 	status = C.tibemsMsgProducer_Send(msgProducer, txtMsg)
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// destroy the message
 	status = C.tibemsMsg_Destroy(txtMsg)
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// destroy the producer
 	status = C.tibemsMsgProducer_Close(msgProducer)
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// destroy the session
 	status = C.tibemsSession_Close(session)
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
 
 	// destroy the destination
 	status = C.tibemsDestination_Destroy(dest)
-	if status != tibems.TIBEMS_OK {
+	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
 	}
