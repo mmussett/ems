@@ -1,8 +1,8 @@
 package ems
 
 import (
+	"fmt"
 	"testing"
-
 )
 
 func TestNewClient(t *testing.T) {
@@ -85,6 +85,32 @@ func TestClient_SendReceive(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
+
+	err = c.Disconnect()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+
+}
+
+func TestClient_Receive(t *testing.T) {
+
+	ops := NewClientOptions().SetServerUrl("tcp://127.0.0.1:7222").SetUsername("admin").SetPassword("")
+
+	c := NewClient(ops).(*client)
+
+	err := c.Connect()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	msg, err := c.Receive("queue.sample")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	fmt.Println(msg)
 
 	err = c.Disconnect()
 	if err != nil {
