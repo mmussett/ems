@@ -80,7 +80,6 @@ func (c *Client) Connect() error {
 	c.cf = C.tibemsConnectionFactory_Create()
 
 	url := c.options.GetServerUrl()
-	fmt.Println(url.String())
 
 	status = C.tibemsConnectionFactory_SetServerURL(c.cf, C.CString(url.String()))
 	if status != TIBEMS_OK {
