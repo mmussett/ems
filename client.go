@@ -30,7 +30,7 @@ import (
 	"unsafe"
 )
 
-type Client interface {
+type IClient interface {
 	IsConnected() bool
 	Connect() error
 	Disconnect() error
@@ -39,7 +39,7 @@ type Client interface {
 	Receive(destination string) (string,error)
 }
 
-type client struct {
+type Client struct {
 	conn         C.tibemsConnection
 	cf           C.tibemsConnectionFactory
 	errorContext C.tibemsErrorContext
@@ -48,16 +48,16 @@ type client struct {
 	sync.RWMutex
 }
 
-func NewClient(o *ClientOptions) Client {
+func NewClient(o *ClientOptions) IClient {
 
-	c := &client{}
+	c := &Client{}
 	c.options = *o
 	c.status = disconnected
 
 	return c
 }
 
-func (c *client) IsConnected() bool {
+func (c *Client) IsConnected() bool {
 
 
 	c.RLock()
@@ -66,7 +66,7 @@ func (c *client) IsConnected() bool {
 	return c.status == connected
 
 }
-func (c *client) Connect() error {
+func (c *Client) Connect() error {
 
 	c.RLock()
 	defer c.RUnlock()
@@ -107,7 +107,7 @@ func (c *client) Connect() error {
 	return nil
 }
 
-func (c *client) Disconnect() error {
+func (c *Client) Disconnect() error {
 
 	c.RLock()
 	defer c.RUnlock()
@@ -131,7 +131,7 @@ func (c *client) Disconnect() error {
 	return nil
 }
 
-func (c *client) SendReceive(destination string, message string, deliveryMode string, expiration int) (string, error) {
+func (c *Client) SendReceive(destination string, message string, deliveryMode string, expiration int) (string, error) {
 	var dest C.tibemsDestination
 	var session C.tibemsSession
 	var requestor C.tibemsMsgRequestor
@@ -261,12 +261,11 @@ func (c *client) SendReceive(destination string, message string, deliveryMode st
 		return "", errors.New(e)
 	}
 
-
 	return replyMessageText, nil
 
 }
 
-func (c *client) Receive(destination string) (string, error) {
+func (c *Client) Receive(destination string) (string, error) {
 
 
 
@@ -384,7 +383,7 @@ func (c *client) Receive(destination string) (string, error) {
 	return messageText,nil
 }
 
-func (c *client) Send(destination string, message string, deliveryDelay int, deliveryMode string, expiration int) error {
+func (c *Client) Send(destination string, message string, deliveryDelay int, deliveryMode string, expiration int) error {
 
 	var dest C.tibemsDestination
 	var session C.tibemsSession
@@ -492,20 +491,20 @@ func (c *client) Send(destination string, message string, deliveryDelay int, del
 	return nil
 }
 
-func (c *client) connectionStatus() uint32 {
+func (c *Client) connectionStatus() uint32 {
 	c.RLock()
 	defer c.RUnlock()
 	status := atomic.LoadUint32(&c.status)
 	return status
 }
 
-func (c *client) setConnected(status uint32) {
+func (c *Client) setConnected(status uint32) {
 	c.RLock()
 	defer c.RUnlock()
 	atomic.StoreUint32(&c.status, status)
 }
 
-func (c *client) getErrorContext() (string, string) {
+func (c *Client) getErrorContext() (string, string) {
 
 	var errorString, stackTrace = "", ""
 	var buf *C.char
