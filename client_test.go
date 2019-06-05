@@ -9,7 +9,7 @@ func TestNewClient(t *testing.T) {
 
 	ops := NewClientOptions().SetServerUrl("tcp://127.0.0.1:7222").SetUsername("admin").SetPassword("")
 
-	c := NewClient(ops).(*client)
+	c := NewClient(ops).(*Client)
 
 	if c == nil {
 		t.Fatalf("ops is nil")
@@ -37,7 +37,7 @@ func TestClient_Connect(t *testing.T) {
 
 	ops := NewClientOptions().SetServerUrl("tcp://127.0.0.1:7222").SetUsername("admin").SetPassword("")
 
-	c := NewClient(ops).(*client)
+	c := NewClient(ops).(*Client)
 
 	err := c.Connect()
 	if err != nil {
@@ -52,7 +52,7 @@ func TestClient_Send(t *testing.T) {
 
 	ops := NewClientOptions().SetServerUrl("tcp://127.0.0.1:7222").SetUsername("admin").SetPassword("")
 
-	c := NewClient(ops).(*client)
+	c := NewClient(ops).(*Client)
 
 	err := c.Connect()
 	if err != nil {
@@ -74,7 +74,7 @@ func TestClient_SendReceive(t *testing.T) {
 
 	ops := NewClientOptions().SetServerUrl("tcp://127.0.0.1:7222").SetUsername("admin").SetPassword("")
 
-	c := NewClient(ops).(*client)
+	c := NewClient(ops).(*Client)
 
 	err := c.Connect()
 	if err != nil {
@@ -98,7 +98,7 @@ func TestClient_Receive(t *testing.T) {
 
 	ops := NewClientOptions().SetServerUrl("tcp://127.0.0.1:7222").SetUsername("admin").SetPassword("")
 
-	c := NewClient(ops).(*client)
+	c := NewClient(ops).(*Client)
 
 	err := c.Connect()
 	if err != nil {
