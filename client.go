@@ -357,7 +357,7 @@ func (c *Client) Receive(destination string) (string, error) {
 
 	messageText := C.GoString(buf)
 
-	fmt.Println("Received JMS Text Message = "+ messageText)
+	//fmt.Println("Received JMS Text Message = "+ messageText)
 
 	// destroy the message
 	status = C.tibemsMsg_Destroy(msg)
