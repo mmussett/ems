@@ -59,7 +59,7 @@ func TestClient_Send(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	err = c.Send("queue.sample", "hello, world", 0, "non_persistent", 10000)
+	err = c.Send("queue.sample", "queue", "hello, world", 0, "non_persistent", 10000)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -81,7 +81,7 @@ func TestClient_SendReceive(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	_, err = c.SendReceive("queue.sample", "hello, world",  "non_persistent", 1000)
+	_, err = c.SendReceive("queue.sample", "queue", "hello, world", "non_persistent", 1000)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -90,7 +90,6 @@ func TestClient_SendReceive(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-
 
 }
 
@@ -105,9 +104,14 @@ func TestClient_Receive(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	msg, err := c.Receive("queue.sample")
+	msg, timeout, err := c.Receive("queue.sample", "queue", 1000)
+
 	if err != nil {
 		t.Fatalf(err.Error())
+	}
+
+	if timeout {
+		fmt.Println("Timeout detected")
 	}
 
 	fmt.Println(msg)
@@ -116,6 +120,5 @@ func TestClient_Receive(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-
 
 }

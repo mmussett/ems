@@ -34,9 +34,9 @@ type IClient interface {
 	IsConnected() bool
 	Connect() error
 	Disconnect() error
-	Send(destination string, message string, deliveryDelay int, deliveryMode string, expiration int) error
-	SendReceive(destination string, message string, deliveryMode string, expiration int) (string, error)
-	Receive(destination string) (string,error)
+	Send(destination string, destinationType string, message string, deliveryDelay int, deliveryMode string, expiration int) error
+	SendReceive(destination string, destinationType string, message string, deliveryMode string, expiration int) (string, error)
+	Receive(destination string, destinationType string, timeout int) (string, bool, error)
 }
 
 type Client struct {
@@ -58,7 +58,6 @@ func NewClient(o *ClientOptions) IClient {
 }
 
 func (c *Client) IsConnected() bool {
-
 
 	c.RLock()
 	defer c.RUnlock()
@@ -130,17 +129,25 @@ func (c *Client) Disconnect() error {
 	return nil
 }
 
-func (c *Client) SendReceive(destination string, message string, deliveryMode string, expiration int) (string, error) {
+func (c *Client) SendReceive(destination string, destinationType string, message string, deliveryMode string, expiration int) (string, error) {
 	var dest C.tibemsDestination
 	var session C.tibemsSession
 	var requestor C.tibemsMsgRequestor
 	var reqMsg C.tibemsMsg
 	var repMsg C.tibemsMsg
-
 	var msg C.tibemsTextMsg
+	var destType C.tibemsDestinationType = TIBEMS_QUEUE
+
+	switch strings.ToUpper(destinationType) {
+	case "QUEUE":
+		destType = TIBEMS_QUEUE
+		break
+	case "TOPIC":
+		destType = TIBEMS_TOPIC
+	}
 
 	// create the destination
-	status := C.tibemsDestination_Create(&dest, TIBEMS_QUEUE, C.CString(destination))
+	status := C.tibemsDestination_Create(&dest, destType, C.CString(destination))
 	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return "", errors.New(e)
@@ -228,9 +235,7 @@ func (c *Client) SendReceive(destination string, message string, deliveryMode st
 
 	replyMessageText := C.GoString(buf)
 
-
-	fmt.Println("Received JMS Reply Text Message = "+replyMessageText)
-
+	fmt.Println("Received JMS Reply Text Message = " + replyMessageText)
 
 	// destroy the request message
 	status = C.tibemsMsg_Destroy(reqMsg)
@@ -264,9 +269,7 @@ func (c *Client) SendReceive(destination string, message string, deliveryMode st
 
 }
 
-func (c *Client) Receive(destination string) (string, error) {
-
-
+func (c *Client) Receive(destination string, destinationType string, timeout int) (string, bool, error) {
 
 	var dest C.tibemsDestination
 	var session C.tibemsSession
@@ -274,68 +277,82 @@ func (c *Client) Receive(destination string) (string, error) {
 	var msg C.tibemsMsg
 	var msgType C.tibemsMsgType
 	var msgTypeName string
+	var destType C.tibemsDestinationType = TIBEMS_QUEUE
 
+	switch strings.ToUpper(destinationType) {
+	case "QUEUE":
+		destType = TIBEMS_QUEUE
+		break
+	case "TOPIC":
+		destType = TIBEMS_TOPIC
+	}
 
 	// create the destination
-	status := C.tibemsDestination_Create(&dest, TIBEMS_QUEUE, C.CString(destination))
+	status := C.tibemsDestination_Create(&dest, destType, C.CString(destination))
+
 	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
-		return "", errors.New(e)
+		return "", false, errors.New(e)
 	}
 
 	// create the session
 	status = C.tibemsConnection_CreateSession(c.conn, &session, TIBEMS_FALSE, TIBEMS_AUTO_ACKNOWLEDGE)
 	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
-		return "", errors.New(e)
+		return "", false, errors.New(e)
 	}
 
 	// create the consumer
 	status = C.tibemsSession_CreateConsumer(session, &msgConsumer, dest, nil, TIBEMS_FALSE)
 	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
-		return "", errors.New(e)
+		return "", false, errors.New(e)
 	}
 
 	// start the connection
 	status = C.tibemsConnection_Start(c.conn)
 	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
-		return "", errors.New(e)
+		return "", false, errors.New(e)
 	}
 
-	status = C.tibemsMsgConsumer_Receive(msgConsumer, &msg)
+	status = C.tibemsMsgConsumer_ReceiveTimeout(msgConsumer, &msg, C.castToLong(C.int(timeout)))
+
 	if status != TIBEMS_OK {
-		e, _ := c.getErrorContext()
-		return "", errors.New(e)
+		if status == TIBEMS_TIMEOUT {
+			return "", true, nil
+		} else {
+			e, s := c.getErrorContext()
+			fmt.Println(s)
+			return "", false, errors.New(e)
+		}
 	}
 
 	// Check message type
 	status = C.tibemsMsg_GetBodyType(msg, &msgType)
 	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
-		return "", errors.New(e)
+		return "", false, errors.New(e)
 	}
 
-
-	switch(msgType) {
+	switch msgType {
 	case TIBEMS_MESSAGE:
-		msgTypeName="MESSAGE"
+		msgTypeName = "MESSAGE"
 		break
 	case TIBEMS_TEXT_MESSAGE:
-		msgTypeName="TEXT"
+		msgTypeName = "TEXT"
 		break
 	case TIBEMS_BYTES_MESSAGE:
-		msgTypeName="BYTES"
+		msgTypeName = "BYTES"
 		break
 	case TIBEMS_OBJECT_MESSAGE:
-		msgTypeName="OBJECT"
+		msgTypeName = "OBJECT"
 		break
 	case TIBEMS_STREAM_MESSAGE:
-		msgTypeName="STREAM"
+		msgTypeName = "STREAM"
 		break
 	case TIBEMS_MAP_MESSAGE:
-		msgTypeName="MAP"
+		msgTypeName = "MAP"
 		break
 	default:
 		msgTypeName = "UNKNOWN"
@@ -343,7 +360,7 @@ func (c *Client) Receive(destination string) (string, error) {
 	}
 
 	if msgType != TIBEMS_TEXT_MESSAGE {
-		return "",errors.New("Unable to process message type "+msgTypeName)
+		return "", false, errors.New("Unable to process message type " + msgTypeName)
 	}
 
 	// Get the string data from the reply text message
@@ -362,36 +379,44 @@ func (c *Client) Receive(destination string) (string, error) {
 	status = C.tibemsMsg_Destroy(msg)
 	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
-		return "",errors.New(e)
+		return "", false, errors.New(e)
 	}
 
 	// destroy the session
 	status = C.tibemsSession_Close(session)
 	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
-		return "",errors.New(e)
+		return "", false, errors.New(e)
 	}
 
 	// destroy the destination
 	status = C.tibemsDestination_Destroy(dest)
 	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
-		return "", errors.New(e)
+		return "", false, errors.New(e)
 	}
 
-	return messageText,nil
+	return messageText, false, nil
 }
 
-func (c *Client) Send(destination string, message string, deliveryDelay int, deliveryMode string, expiration int) error {
+func (c *Client) Send(destination string, destinationType string, message string, deliveryDelay int, deliveryMode string, expiration int) error {
 
 	var dest C.tibemsDestination
 	var session C.tibemsSession
 	var msgProducer C.tibemsMsgProducer
 	var txtMsg C.tibemsTextMsg
+	var destType C.tibemsDestinationType = TIBEMS_QUEUE
 
+	switch strings.ToUpper(destinationType) {
+	case "QUEUE":
+		destType = TIBEMS_QUEUE
+		break
+	case "TOPIC":
+		destType = TIBEMS_TOPIC
+	}
 
 	// create the destination
-	status := C.tibemsDestination_Create(&dest, TIBEMS_QUEUE, C.CString(destination))
+	status := C.tibemsDestination_Create(&dest, destType, C.CString(destination))
 	if status != TIBEMS_OK {
 		e, _ := c.getErrorContext()
 		return errors.New(e)
@@ -506,14 +531,15 @@ func (c *Client) setConnected(status uint32) {
 func (c *Client) getErrorContext() (string, string) {
 
 	var errorString, stackTrace = "", ""
-	var buf *C.char
-	defer C.free(unsafe.Pointer(buf))
+	var buf1, buf2 *C.char
+	defer C.free(unsafe.Pointer(buf1))
+	defer C.free(unsafe.Pointer(buf2))
 
-	C.tibemsErrorContext_GetLastErrorString(c.errorContext, &buf)
-	errorString = C.GoString(buf)
+	C.tibemsErrorContext_GetLastErrorString(c.errorContext, &buf1)
+	errorString = C.GoString(buf1)
 
-	C.tibemsErrorContext_GetLastErrorStackTrace(c.errorContext, &buf)
-	stackTrace = C.GoString(buf)
+	C.tibemsErrorContext_GetLastErrorStackTrace(c.errorContext, &buf2)
+	stackTrace = C.GoString(buf2)
 
 	return errorString, stackTrace
 
