@@ -1,9 +1,13 @@
 package ems
 
+// test on Mac OS with EMS 8.4
+// cgo CFLAGS: -g -Wall -I/opt/tibco/tibhome/ems/8.4/include/tibems
+// cgo LDFLAGS: -L/opt/tibco/tibhome/ems/8.4/lib -ltibems64
+
+// test on Ubuntu 20.04 with EMS 10.2
 /*
-#cgo darwin CFLAGS: -I.
-#cgo darwin CFLAGS: -I/opt/tibco/ems/ems841/ems/8.4/include/tibems
-#cgo darwin LDFLAGS: -L/opt/tibco/ems/ems841/ems/8.4/lib -ltibems64
+#cgo CFLAGS: -g -Wall -I/opt/tibco/ems/10.2/include/tibems
+#cgo LDFLAGS: -L/opt/tibco/ems/10.2/lib -ltibems
 
 #include <tibems.h>
 tibemsDestination castToDestination(tibemsTemporaryQueue queue) {
