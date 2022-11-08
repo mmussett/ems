@@ -230,3 +230,9 @@ ok  	_/home/tibco/Documents/go-test/go/ems	0.026s
 ## Conclusion
 
 Although TIBCO is not offering an official client package for **GO**lang to interact with **TIBO EMS** the function can be added by leveraging the provided *TIBCO EMS C libraries* and integrate them into a GO program. Sample integration code is provided as Github repository. The GO integration was originally created and tested for *TIBCO EMS v8.4*. Nevertheless, we have sucessfully tested with the latest release *TIBCO EMS v10.2* as well.
+
+## Known Limitations
+
+The example code is illustrating how to connect to an EMS server. In an enterprise context TLS might be needed to ensure a secure communication between a remote client an a central EMS server. That extra bit was not part of the demonstration provided here. The EMS client is able to impelement it. The Go sample code might require extra handling for TLS as well.
+
+The current unit test code is expecting a local EMS server with no security enabled. Those unit tests should be hanced to check for proper client authentication as well.
